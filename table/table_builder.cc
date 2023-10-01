@@ -168,6 +168,18 @@ void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
       }
       break;
     }
+    case kZlibCompression:
+    case kZlibRawCompression: {
+      std::string& compressed = r->compressed_output;
+      if (port::Zlib_Compress(raw.data(), raw.size(),type == kZlibRawCompression, compressed) &&
+          compressed.size() < raw.size() - (raw.size() / 8u)) {
+        block_contents = compressed;
+      } else {
+        block_contents = raw;
+        type = kNoCompression;
+      }
+      break;
+    }
   }
   WriteRawBlock(block_contents, type, handle);
   r->compressed_output.clear();

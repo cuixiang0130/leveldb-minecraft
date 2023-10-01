@@ -40,7 +40,7 @@ void Footer::EncodeTo(std::string* dst) const {
 }
 
 Status Footer::DecodeFrom(Slice* input) {
-  if (input->size() < kEncodedLength) {
+    if (input->size() < kEncodedLength) {
     return Status::Corruption("not an sstable (footer too short)");
   }
 
@@ -130,6 +130,21 @@ Status ReadBlock(RandomAccessFile* file, const ReadOptions& options,
       }
       delete[] buf;
       result->data = Slice(ubuf, ulength);
+      result->heap_allocated = true;
+      result->cachable = true;
+      break;
+    }
+    case kZlibCompression:
+    case kZlibRawCompression: {
+      std::string buffer;
+      if (!port::Zlib_Uncompress(data, n, data[n] == kZlibRawCompression, buffer)) {
+        delete[] buf;
+        return Status::Corruption("corrupted compressed block contents");
+      }
+      char* ubuf = new char[buffer.size()];
+      delete[] buf;
+      memcpy(ubuf, buffer.data(), buffer.size());
+      result->data = Slice(ubuf, buffer.size());
       result->heap_allocated = true;
       result->cachable = true;
       break;
