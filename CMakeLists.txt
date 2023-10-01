@@ -39,14 +39,16 @@ check_include_file("unistd.h" HAVE_UNISTD_H)
 
 if(UNIX)
   set(ZLIB_NAME z)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES,".a")
 else()
-  set(ZLIB_NAME zlib)
+  set(ZLIB_NAME zlibstatic)
 endif()
 
 include(CheckLibraryExists)
 check_library_exists(crc32c crc32c_value "" HAVE_CRC32C)
 check_library_exists(snappy snappy_compress "" HAVE_SNAPPY)
-check_library_exists(${ZLIB_NAME} deflate "" HAVE_ZLIB)
+find_package(ZLIB REQUIRED)
+set(HAVE_ZLIB ON)
 check_library_exists(tcmalloc malloc "" HAVE_TCMALLOC)
 
 include(CheckCXXSymbolExists)
@@ -281,6 +283,8 @@ if(HAVE_SNAPPY)
   target_link_libraries(leveldb snappy)
 endif(HAVE_SNAPPY)
 if(HAVE_ZLIB)
+  target_include_directories(leveldb PRIVATE ${ZLIB_INCLUDE_DIRS})
+  link_directories(${ZLIB_LIBRARIES_DIR})
   target_link_libraries(leveldb ${ZLIB_NAME})
 endif(HAVE_ZLIB)
 if(HAVE_TCMALLOC)
@@ -290,11 +294,6 @@ endif(HAVE_TCMALLOC)
 # Needed by port_stdcxx.h
 find_package(Threads REQUIRED)
 target_link_libraries(leveldb Threads::Threads)
-
-add_executable(leveldbutil
-  "db/leveldbutil.cc"
-)
-target_link_libraries(leveldbutil leveldb)
 
 if(LEVELDB_BUILD_TESTS)
   enable_testing()
